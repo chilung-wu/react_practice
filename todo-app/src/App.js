@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
-  const [tasks, setTasks] = useState([]);
+
+  // Load tasks from local storage
+  const loadTasks = () => {
+    const savedTasks = localStorage.getItem('tasks');
+    return savedTasks ? JSON.parse(savedTasks) : [];
+  };
+
+  const [tasks, setTasks] = useState(loadTasks());
   const [task, setTask] = useState('');
+
+  // Save tasks to local storage
+  useEffect(() => {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    console.log('tasks: ', tasks);
+  }, [tasks]);
+
+  // reflect task chages in input field
+  useEffect(() => {
+    console.log('task: ', task);
+  }, [task]);
 
   const addTask = () => {
     if (!task) return;
