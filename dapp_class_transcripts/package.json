@@ -1,0 +1,26 @@
+{
+  "name": "dapp_class_transcripts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.5",
+    "@nomicfoundation/hardhat-toolbox-viem": "^2.0.0",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-waffle": "^2.0.6",
+    "chai": "^4.4.1",
+    "ethereum-waffle": "^4.0.10",
+    "ethers": "^6.10.0",
+    "hardhat": "^2.19.4"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.1",
+    "dotenv": "^16.3.2"
+  }
+}
