@@ -2,7 +2,8 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import '@walletconnect/react-native-compat'
 import { WagmiConfig } from 'wagmi'
-import { mainnet, polygon, arbitrum } from 'viem/chains'
+// import { mainnet, polygon, arbitrum } from 'viem/chains'
+import { sepolia} from 'viem/chains'
 import { createWeb3Modal, defaultWagmiConfig, Web3Modal, W3mButton} from '@web3modal/wagmi-react-native'
 import {PROJECT_ID} from "@env";
 // Ref: https://github.com/crypblizz8/youtube/blob/main/7-web3modal-react-native-nft/App.tsx
@@ -24,7 +25,7 @@ const metadata = {
   }
 }
 
-const chains = [mainnet, polygon, arbitrum]
+const chains = [sepolia]
 
 const wagmiConfig = defaultWagmiConfig({ chains, projectId, metadata })
 
