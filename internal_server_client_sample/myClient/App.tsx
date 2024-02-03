@@ -63,11 +63,17 @@ function App(): React.JSX.Element {
   };
 
   const [data, setData] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    // fetch('http://localhost:3000')
     fetch('http://192.168.47.129:3000')
       .then(response => response.text())
-      .then(text => setData(text));
+      .then(text => setData(text))
+      .catch(err => {
+        console.error(err);
+        setError('An error occurred while fetching data');
+      });
   }, []);
 
   return (
@@ -86,7 +92,8 @@ function App(): React.JSX.Element {
           }}>
 
           <Text style={styles.sectionTitle}>Internal Server Client Sample</Text>
-          <Text style={styles.sectionDescription}>{data} </Text>
+          {error ? <Text>{error}</Text> : <Text>{data}</Text>}
+          {/* <Text style={styles.sectionDescription}>{data} </Text> */}
             
         </View>
       </ScrollView>
