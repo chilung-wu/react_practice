@@ -16,8 +16,9 @@
 // }
 
 
-import React, { useState } from 'react';
-import { StyleSheet, View, TextInput, Button, FlatList, Text } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, TextInput, Button, FlatList, Text, TouchableOpacity } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
 export default function App() {
   const [website, setWebsite] = useState('');
@@ -25,13 +26,67 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [credentials, setCredentials] = useState([]);
 
+  const saveCredentials = async () => {
+    await SecureStore.setItemAsync('credentials', JSON.stringify(credentials));
+  };
+  const loadCredentials = async () => {
+    const result = await SecureStore.getItemAsync('credentials');
+    if (result) {
+      setCredentials(JSON.parse(result));
+    }
+  };
+
+  useEffect(() => {
+    loadCredentials();
+  }, []);
+
+  useEffect(() => {
+    saveCredentials();
+  }, [credentials]);
+
   const addCredential = () => {
-    setCredentials([...credentials, { website, username, password, id: credentials.length.toString() }]);
+    const newCredentials = [...credentials, { website, username, password, id: credentials.length.toString() }];
+    setCredentials(newCredentials);
+    // saveCredentials();
     // Clear inputs after adding
     setWebsite('');
     setUsername('');
     setPassword('');
   };
+
+  const deleteCredential = async (id) => {
+    const newCredentials = credentials.filter(cred => cred.id !== id);
+    setCredentials(newCredentials);
+    // saveCredentials();
+    //update the id values of the remaining credentials
+    const updatedCredentials = newCredentials.map((cred, index) => ({ ...cred, id: index.toString() }));
+    setCredentials(updatedCredentials);
+  };
+
+  const _clearData = async () => {
+    await SecureStore.deleteItemAsync('credentials');
+    setCredentials([]);
+  };
+
+  // const deleteCredential = async (id) => {
+  //   const newCredentials = credentials.filter(cred => cred.id !== id);
+  //   setCredentials(newCredentials);
+  //   // Update the id values of the remaining credentials
+  //   const updatedCredentials = newCredentials.map((cred, index) => ({ ...cred, id: index.toString() }));
+  //   setCredentials(updatedCredentials);
+
+  // const updateCredential = async (id, newCredential) => {
+  //   const newCredentials = credentials.map(cred => cred.id === id ? newCredential : cred);
+  //   setCredentials(newCredentials);
+  //   // saveCredentials();
+  // };
+
+  // const editCredential = async (id) => {
+  //   const updatedCredential = { website: 'updated', username: 'updated', password: 'updated', id: id };
+  //   updateCredential(id, updatedCredential);
+  // };
+     
+
 
   return (
     <View style={styles.container}>
@@ -39,6 +94,7 @@ export default function App() {
       <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} />
       <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
       <Button title="Add Credential" onPress={addCredential} />
+      <Button title="Clear Data" onPress={_clearData} />
       <FlatList
         data={credentials}
         renderItem={({ item }) => (
@@ -46,6 +102,11 @@ export default function App() {
             <Text>Website: {item.website}</Text>
             <Text>Username: {item.username}</Text>
             <Text>Password: {item.password}</Text>
+            <Text>id: {item.id}</Text>
+            {/* <Button title="Delete" onPress={() => deleteCredential(item.id)}/> */}
+            <TouchableOpacity onPress={() => deleteCredential(item.id)}>
+              <Text style={styles.deleteButton}>Delete</Text>
+            </TouchableOpacity>
           </View>
         )}
         keyExtractor={item => item.id}
@@ -72,5 +133,9 @@ const styles = StyleSheet.create({
     padding: 10,
     marginVertical: 8,
     backgroundColor: '#f9c2ff',
+  },
+  deleteButton: {
+    color: 'red',
+    marginTop: 10,
   },
 });
