@@ -1,5 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const https = require('https');
+const fs = require('fs');
 
 const app = express();
 const port = 3000;
@@ -13,6 +15,7 @@ app.use(bodyParser.json());
 // Route to handle POST requests to "/login"
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
+    console.log(`username: ${username}, password: ${password}`);
 
     // Simple check (in real applications, verify credentials securely)
     if (username === 'user' && password === 'pass') {
@@ -22,6 +25,13 @@ app.post('/login', (req, res) => {
     }
 });
 
-app.listen(port, () => {
+https.createServer({
+    key: fs.readFileSync('key.pem'),
+    cert: fs.readFileSync('crt.pem')
+  }, app)
+  .listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
+// app.listen(port, () => {
+//     console.log(`Server running on port ${port}`);
+// });
