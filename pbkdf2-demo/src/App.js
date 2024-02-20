@@ -18,7 +18,8 @@ function App() {
     }).toString();
 
     const encryptedData = CryptoJS.AES.encrypt(dataToEncrypt, key).toString();
-    const newEncryptionResult = { salt, encryptedData, dataToEncrypt };
+    const uuid = uuidv4();
+    const newEncryptionResult = { uuid, salt, encryptedData, dataToEncrypt };
     setEncryptionResults([...encryptionResults, newEncryptionResult]);
   };
 
@@ -60,15 +61,12 @@ function App() {
       <div>
         <h3>Encrypted Data List</h3>
         <ul>
-          {encryptionResults.map((result) => {
-            const uuid = uuidv4();
-            return (
-              <li key={uuid} onClick={() => setSelectedEncryption(result)}>
-                <p>encryptedData: {result.encryptedData} (Click to Decrypt)</p>
-                <p>uuid = {uuid}</p>
-              </li>
-            );
-          })}
+          {encryptionResults.map((result) => (
+            <li key={result.uuid} onClick={() => setSelectedEncryption(result)}>
+              <p>encryptedData: {result.encryptedData} (Click to Decrypt)</p>
+              <p>uuid = {result.uuid}</p>
+            </li>
+          ))}
         </ul>
       </div>
       {selectedEncryption && (
