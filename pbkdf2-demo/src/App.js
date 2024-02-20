@@ -1,14 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CryptoJS from 'crypto-js';
 import { v4 as uuidv4 } from 'uuid';
 
 function App() {
   const [masterPassword, setMasterPassword] = useState('');
+  const [isMasterPasswordSet, setIsMasterPasswordSet] = useState(false);
   const [dataToEncrypt, setDataToEncrypt] = useState('');
   const [encryptionResults, setEncryptionResults] = useState([]);
   const [selectedEncryption, setSelectedEncryption] = useState(null);
   const [decryptionPassword, setDecryptionPassword] = useState('');
   const [decryptedData, setDecryptedData] = useState('');
+
+  useEffect(() => {
+    // 檢查localStorage中是否已經存儲了主密碼
+    const savedMasterPassword = localStorage.getItem('masterPassword');
+    if (savedMasterPassword) {
+      setMasterPassword(savedMasterPassword);
+      setIsMasterPasswordSet(true); // 如果存在主密碼，設置isMasterPasswordSet為true
+    }
+    const savedEncryptionResults = localStorage.getItem('encryptionResults');
+    if (savedEncryptionResults) {
+      setEncryptionResults(JSON.parse(savedEncryptionResults));
+    }
+  }, []);
 
   const encryptData = () => {
     const salt = CryptoJS.lib.WordArray.random(128 / 8).toString();
@@ -16,11 +30,17 @@ function App() {
       keySize: 512 / 32,
       iterations: 1000
     }).toString();
+    console.log('enc-key', key);
 
     const encryptedData = CryptoJS.AES.encrypt(dataToEncrypt, key).toString();
     const uuid = uuidv4();
     const newEncryptionResult = { uuid, salt, encryptedData, dataToEncrypt };
-    setEncryptionResults([...encryptionResults, newEncryptionResult]);
+    const updatedEncryptionResults = [...encryptionResults, newEncryptionResult];
+    setEncryptionResults(updatedEncryptionResults);
+  
+    // 存儲加密結果到localStorage
+    localStorage.setItem('encryptionResults', JSON.stringify(updatedEncryptionResults));
+    console.log('encryptionResults', updatedEncryptionResults);
   };
 
   const decryptData = (encryptedData, salt) => {
@@ -28,6 +48,7 @@ function App() {
       keySize: 512 / 32,
       iterations: 1000
     }).toString();
+    console.log('dec-key', key); //same key as encryption
 
     const decryptedDataBytes = CryptoJS.AES.decrypt(encryptedData, key);
     const decryptedData = decryptedDataBytes.toString(CryptoJS.enc.Utf8);
@@ -35,18 +56,53 @@ function App() {
     setDecryptedData(decryptedData);
   };
 
+  const saveMasterPassword = () => {
+    localStorage.setItem('masterPassword', masterPassword);
+    setIsMasterPasswordSet(true);
+  };
+
+  // 當設置主密碼時，也將其保存到localStorage
+  const handleMasterPasswordChange = (e) => {
+    const newMasterPassword = e.target.value;
+    setMasterPassword(newMasterPassword);
+  };
+
+  const clearData = () => {
+    // 清除localStorage中的數據
+    localStorage.removeItem('masterPassword');
+    localStorage.removeItem('encryptionResults');
+  
+    // 重置應用狀態
+    setMasterPassword('');
+    setIsMasterPasswordSet(false);
+    setDataToEncrypt('');
+    setEncryptionResults([]);
+    setSelectedEncryption(null);
+    setDecryptionPassword('');
+    setDecryptedData('');
+  };
+
   return (
     <div>
       <h2>PBKDF2 Key Derivation and Encryption Demo</h2>
       <div>
+        <button onClick={clearData}>Clear All Data</button>
+      </div>
+      <div>
         <h3>Set Master Password</h3>
-        <input
-          type="password"
-          value={masterPassword}
-          onChange={(e) => setMasterPassword(e.target.value)}
-          placeholder="Master Password"
-        />
-        {masterPassword && <p>masterPassword: {masterPassword}</p>}
+        {!isMasterPasswordSet ? (
+          <div>
+            <input
+              type="password"
+              value={masterPassword}
+              onChange={handleMasterPasswordChange}
+              placeholder="Master Password"
+            />
+            <button onClick={saveMasterPassword} style={{ padding: '10px 20px' }}>Save</button>
+          </div>
+        ) : (
+          <p>masterPassword: {masterPassword}</p>
+        )}
       </div>
       <div>
         <h3>Encrypt Data</h3>
