@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, TextInput, Button, FlatList, Text, TouchableOpacity, Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import CryptoJS from 'react-native-crypto-js';
+
 
 export default function App() {
   const [website, setWebsite] = useState('');
@@ -9,6 +11,38 @@ export default function App() {
   const [credentials, setCredentials] = useState([]);
   const [masterPassword, setMasterPassword] = useState('');
   const [isMasterPasswordSet, setIsMasterPasswordSet] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+
+  // initialize, load credentials and master password
+  useEffect(() => {
+    loadCredentials();
+    loadMasterPassword();
+  }, []);
+
+  // save credentials when credentials change
+  useEffect(() => {
+    saveCredentials();
+  }, [credentials]);
+
+  const encryptData = (password) => {
+    const salt = CryptoJS.lib.WordArray.random(128 / 8).toString(CryptoJS.enc.Hex);
+    const key = CryptoJS.PBKDF2(masterPassword, salt, {
+      keySize: 256 / 32,
+      iterations: 1000
+    });
+    const encryptedPassword = CryptoJS.AES.encrypt(password, key).toString();
+    return { encryptedPassword, salt };
+  };
+
+  const decryptData = (encryptedPassword, salt) => {
+    const key = CryptoJS.PBKDF2(masterPassword, salt, {
+      keySize: 256 / 32,
+      iterations: 1000
+    });
+    const decryptedDataBytes = CryptoJS.AES.decrypt(encryptedPassword, key);
+    const decryptedPassword = decryptedDataBytes.toString(CryptoJS.enc.Utf8);
+    return decryptedPassword;
+  };
 
   const saveCredentials = async () => {
     await SecureStore.setItemAsync('credentials', JSON.stringify(credentials));
@@ -53,17 +87,6 @@ export default function App() {
     }
   };
 
-  // initialize, load credentials and master password
-  useEffect(() => {
-    loadCredentials();
-    loadMasterPassword();
-  }, []);
-
-  // save credentials when credentials change
-  useEffect(() => {
-    saveCredentials();
-  }, [credentials]);
-
   // save current credential to SecureStore
   // TODO: 如果id僅用於keyExtractor，可以考慮使用其他唯一標識符（如生成的UUID），這樣就不需要在每次刪除操作後更新它們。
   const addCredential = () => {
@@ -96,6 +119,25 @@ export default function App() {
     setIsMasterPasswordSet(false);
   };
 
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.item}
+      onPress={() => setSelectedId(selectedId === item.id ? null : item.id)} // Toggle selection
+    >
+      <Text style={styles.itemTextStyle}>Website: {item.website}</Text>
+      {selectedId === item.id && (
+        <>
+          <Text style={styles.itemTextStyle}>Username: {item.username}</Text>
+          <Text style={styles.itemTextStyle}>Password: {item.password}</Text>
+          <Text style={styles.itemTextStyle}>id: {item.id}</Text>
+          <TouchableOpacity onPress={() => deleteCredential(item.id)}>
+            <Text style={[styles.deleteButton, styles.itemTextStyle]}>Delete</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       {!isMasterPasswordSet ? (
@@ -120,21 +162,11 @@ export default function App() {
       <Button title="Add Credential" onPress={addCredential} />
       <Text>{"\n"}</Text>
       <Button title="Clear Data" onPress={_clearData}/>
-      <FlatList
-        data={credentials}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <Text style={styles.itemTextStyle}>Website: {item.website}</Text>
-            <Text style={styles.itemTextStyle}>Username: {item.username}</Text>
-            <Text style={styles.itemTextStyle}>Password: {item.password}</Text>
-            <Text style={styles.itemTextStyle}>id: {item.id}</Text>
-            {/* <Button title="Delete" onPress={() => deleteCredential(item.id)}/> */}
-            <TouchableOpacity onPress={() => deleteCredential(item.id)}>
-              <Text style={[styles.deleteButton, styles.itemTextStyle]}>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        keyExtractor={item => item.id}
+      <FlatList // FlatList是一個高效的滾動列表元件，用於顯示一個滾動的數據列表
+      data={credentials} // 設定這個列表顯示的數據源，credentials是一個包含多個項目的數組
+      renderItem={renderItem} // 指定如何渲染每一項數據，這裡傳入了上面定義的renderItem函數
+      keyExtractor={item => item.id} // 指定每一項數據的唯一鍵值，這裡使用每個項目的id作為唯一鍵
+      extraData={selectedId} // 當selectedId變化時，會觸發列表重新渲染，確保選中狀態的更新能夠正確顯示
       />
     </View>
   );
