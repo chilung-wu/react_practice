@@ -25,7 +25,10 @@ function App() {
   }, []);
 
   const encryptData = () => {
+    // 生成一個隨機的鹽值（salt），用於與密碼結合生成鍵。這裡使用 128 位（16 字節）的隨機數。
     const salt = CryptoJS.lib.WordArray.random(128 / 8).toString();
+    // 使用 PBKDF2 函數根據提供的密碼（masterPassword）、鹽值（salt）、鍵大小（keySize）和迭代次數（iterations）來生成密鑰。
+    // keySize 設置為 512 位（64 字節），迭代次數設置為 1000。這個過程增加了密鑰生成的計算難度，提高了安全性。
     const key = CryptoJS.PBKDF2(masterPassword, salt, {
       keySize: 512 / 32,
       iterations: 1000
