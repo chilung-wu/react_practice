@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, TextInput, Button, FlatList, Text, TouchableOpacity, Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import CryptoJS from 'react-native-crypto-js';
-
+import CryptoJS from "rn-crypto-js";
 
 export default function App() {
   const [website, setWebsite] = useState('');
@@ -24,12 +23,13 @@ export default function App() {
     saveCredentials();
   }, [credentials]);
 
-  const encryptData = (password) => {
-    const salt = CryptoJS.lib.WordArray.random(128 / 8).toString(CryptoJS.enc.Hex);
-    const key = CryptoJS.PBKDF2(masterPassword, salt, {
+  const encryptData = () => {
+    const salt = CryptoJS.lib.WordArray.random(128 / 8).toString();
+    const key = CryptoJS.PBKDF2(masterPassword, salt, { 
       keySize: 256 / 32,
       iterations: 1000
-    });
+    }).toString();
+    console.log('enc-key', key);
     const encryptedPassword = CryptoJS.AES.encrypt(password, key).toString();
     return { encryptedPassword, salt };
   };
@@ -38,7 +38,7 @@ export default function App() {
     const key = CryptoJS.PBKDF2(masterPassword, salt, {
       keySize: 256 / 32,
       iterations: 1000
-    });
+    }).toString();
     const decryptedDataBytes = CryptoJS.AES.decrypt(encryptedPassword, key);
     const decryptedPassword = decryptedDataBytes.toString(CryptoJS.enc.Utf8);
     return decryptedPassword;
@@ -90,7 +90,9 @@ export default function App() {
   // save current credential to SecureStore
   // TODO: 如果id僅用於keyExtractor，可以考慮使用其他唯一標識符（如生成的UUID），這樣就不需要在每次刪除操作後更新它們。
   const addCredential = () => {
-    const newCredentials = [...credentials, { website, username, password, id: credentials.length.toString() }];
+    const { encryptedPassword, salt } = encryptData();
+    const newCredential = { website, username, password, encryptedPassword, salt, id: credentials.length.toString() };
+    const newCredentials = [...credentials, newCredential];
     setCredentials(newCredentials);
     // Clear inputs after adding
     setWebsite('');
@@ -129,7 +131,10 @@ export default function App() {
         <>
           <Text style={styles.itemTextStyle}>Username: {item.username}</Text>
           <Text style={styles.itemTextStyle}>Password: {item.password}</Text>
+          <Text style={styles.itemTextStyle}>Encrypted Password: {item.encryptedPassword}</Text>
+          <Text style={styles.itemTextStyle}>Salt: {item.salt}</Text>
           <Text style={styles.itemTextStyle}>id: {item.id}</Text>
+          <Text style={styles.itemTextStyle}>Decrypted Password: {decryptData(item.encryptedPassword, item.salt)}</Text>
           <TouchableOpacity onPress={() => deleteCredential(item.id)}>
             <Text style={[styles.deleteButton, styles.itemTextStyle]}>Delete</Text>
           </TouchableOpacity>
