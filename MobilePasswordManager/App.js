@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, TextInput, Button, FlatList, Text, TouchableOpacity, Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import CryptoJS from "rn-crypto-js";
+import * as Clipboard from 'expo-clipboard'
 
 export default function App() {
   const [website, setWebsite] = useState('');
@@ -11,6 +12,7 @@ export default function App() {
   const [masterPassword, setMasterPassword] = useState('');
   const [isMasterPasswordSet, setIsMasterPasswordSet] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [passwordVisibility, setPasswordVisibility] = useState({});
 
   // initialize, load credentials and master password
   useEffect(() => {
@@ -22,6 +24,21 @@ export default function App() {
   useEffect(() => {
     saveCredentials();
   }, [credentials]);
+
+  const copyToClipboard = async (text) => {
+    await Clipboard.setStringAsync(text);
+    Alert.alert("Copied", "Password copied to clipboard. It will be cleared in 30 seconds.");
+    setTimeout(() => {
+      Clipboard.setStringAsync(''); // Clear clipboard after 30 seconds
+    }, 30000); // 30 seconds
+  };
+
+  const togglePasswordVisibility = (id) => {
+    setPasswordVisibility(prevState => ({
+      ...prevState,
+      [id]: !prevState[id],
+    }));
+  };
 
   const encryptData = () => {
     const salt = CryptoJS.lib.WordArray.random(128 / 8).toString();
@@ -35,6 +52,7 @@ export default function App() {
   };
 
   const decryptData = (encryptedPassword, salt) => {
+    // const fakeMasterPassword = 'bbbb';
     const key = CryptoJS.PBKDF2(masterPassword, salt, {
       keySize: 256 / 32,
       iterations: 1000
@@ -130,11 +148,19 @@ export default function App() {
       {selectedId === item.id && (
         <>
           <Text style={styles.itemTextStyle}>Username: {item.username}</Text>
-          <Text style={styles.itemTextStyle}>Password: {item.password}</Text>
+          {/* <Text style={styles.itemTextStyle}>Password: {item.password}</Text> */}
+          {/* <Text style={styles.itemTextStyle}>Password: {passwordVisibility[item.id] ? item.password : '••••••••'}</Text> */}
+          <Text style={styles.itemTextStyle}>Password: {passwordVisibility[item.id] ? decryptData(item.encryptedPassword, item.salt) : '••••••••'}</Text>
+          <TouchableOpacity onPress={() => togglePasswordVisibility(item.id)} style={styles.appButtonContainer}>
+            <Text style={styles.appButtonText}>{passwordVisibility[item.id] ? 'Hide' : 'Show'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => copyToClipboard(item.password)} style={styles.appButtonContainer}>
+            <Text style={styles.appButtonText}>Copy</Text>
+          </TouchableOpacity>
+          <Text style={styles.itemTextStyle}>Decrypted Password: {decryptData(item.encryptedPassword, item.salt)}</Text>
           <Text style={styles.itemTextStyle}>Encrypted Password: {item.encryptedPassword}</Text>
           <Text style={styles.itemTextStyle}>Salt: {item.salt}</Text>
           <Text style={styles.itemTextStyle}>id: {item.id}</Text>
-          <Text style={styles.itemTextStyle}>Decrypted Password: {decryptData(item.encryptedPassword, item.salt)}</Text>
           <TouchableOpacity onPress={() => deleteCredential(item.id)}>
             <Text style={[styles.deleteButton, styles.itemTextStyle]}>Delete</Text>
           </TouchableOpacity>
@@ -206,5 +232,20 @@ const styles = StyleSheet.create({
   itemTextStyle : {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  appButtonContainer: {
+    elevation: 8,
+    backgroundColor: "#009688",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 10,
+  },
+  appButtonText: {
+    fontSize: 18,
+    color: "#fff",
+    fontWeight: "bold",
+    alignSelf: "center",
+    textTransform: "uppercase"
   },
 });
