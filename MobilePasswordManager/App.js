@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TextInput, Button, FlatList, Text, TouchableOpacity, Alert } from 'react-native';
+import { Modal, Pressable, StyleSheet, View, TextInput, Button, FlatList, Text, TouchableOpacity, Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import CryptoJS from "rn-crypto-js";
 import * as Clipboard from 'expo-clipboard'
@@ -13,6 +13,13 @@ export default function App() {
   const [isMasterPasswordSet, setIsMasterPasswordSet] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [passwordVisibility, setPasswordVisibility] = useState({});
+
+  // Pop up Prompt window to enter master password
+  const [isPromptVisible, setIsPromptVisible] = useState(false);
+  const [tempMasterPassword, setTempMasterPassword] = useState('');
+  const [decryptedPasswordToShow, setDecryptedPasswordToShow] = useState('');
+  
+  const [error, setError] = useState('');
 
   // initialize, load credentials and master password
   useEffect(() => {
@@ -51,7 +58,25 @@ export default function App() {
     return { encryptedPassword, salt };
   };
 
-  const decryptData = (encryptedPassword, salt) => {
+  // Decrypt the selected credential and show the password, if failed, show error message.
+  const decryptAndShowPassword = async () => {
+    // Assuming you have a selected credential to decrypt
+    const selectedCredential = credentials.find(cred => cred.id === selectedId);
+    if (selectedCredential) {
+      try {
+        const decryptedPassword = decryptData(selectedCredential.encryptedPassword, selectedCredential.salt, tempMasterPassword);
+        setDecryptedPasswordToShow(decryptedPassword);
+        setIsPromptVisible(false); // Close the modal
+        setError('');
+      } catch (error) {
+        setError("Failed to decrypt the password. Please check the master password.");
+      }
+        // Clear the temporary master password after use
+      setTempMasterPassword('');
+    }
+  };
+
+  const decryptData = (encryptedPassword, salt, masterPassword) => {
     // const fakeMasterPassword = 'bbbb';
     const key = CryptoJS.PBKDF2(masterPassword, salt, {
       keySize: 256 / 32,
@@ -59,6 +84,9 @@ export default function App() {
     }).toString();
     const decryptedDataBytes = CryptoJS.AES.decrypt(encryptedPassword, key);
     const decryptedPassword = decryptedDataBytes.toString(CryptoJS.enc.Utf8);
+    if (!decryptedPassword) {
+      throw new Error("Decryption failed");
+    }
     return decryptedPassword;
   };
 
@@ -77,6 +105,7 @@ export default function App() {
     console.log('load: json.parse(result)', JSON.parse(result));
   };
 
+  // Alert.alert don't work in andorid emulator. need to modify alert method.
   const saveMasterPassword = async () => {
     if (masterPassword.trim() === '') {
       Alert.alert('Error', 'Master password cannot be empty.');
@@ -137,12 +166,22 @@ export default function App() {
     setCredentials([]);
     setMasterPassword('');
     setIsMasterPasswordSet(false);
+    setTempMasterPassword('');
+    setDecryptedPasswordToShow('');
+    setPasswordVisibility({});
+    
   };
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.item}
-      onPress={() => setSelectedId(selectedId === item.id ? null : item.id)} // Toggle selection
+      onPress={() => {
+        if (selectedId !== item.id) {
+          setDecryptedPasswordToShow(''); // Reset decrypted password display
+          setError(''); // Reset error message  
+        }
+        setSelectedId(selectedId === item.id ? null : item.id);
+      }}
     >
       <Text style={styles.itemTextStyle}>Website: {item.website}</Text>
       {selectedId === item.id && (
@@ -150,14 +189,17 @@ export default function App() {
           <Text style={styles.itemTextStyle}>Username: {item.username}</Text>
           {/* <Text style={styles.itemTextStyle}>Password: {item.password}</Text> */}
           {/* <Text style={styles.itemTextStyle}>Password: {passwordVisibility[item.id] ? item.password : '••••••••'}</Text> */}
-          <Text style={styles.itemTextStyle}>Password: {passwordVisibility[item.id] ? decryptData(item.encryptedPassword, item.salt) : '••••••••'}</Text>
-          <TouchableOpacity onPress={() => togglePasswordVisibility(item.id)} style={styles.appButtonContainer}>
-            <Text style={styles.appButtonText}>{passwordVisibility[item.id] ? 'Hide' : 'Show'}</Text>
+          {/* <Text style={styles.itemTextStyle}>Password: {passwordVisibility[item.id] ? decryptData(item.encryptedPassword, item.salt) : '••••••••'}</Text> */}
+          <Text style={styles.itemTextStyle}>Password: {decryptedPasswordToShow  ? decryptedPasswordToShow : '••••••••'}</Text>
+          <TouchableOpacity onPress={() => { setSelectedId(item.id); setIsPromptVisible(true); }} style={styles.appButtonContainer}>
+            <Text style={styles.appButtonText}>Show Password</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => copyToClipboard(item.password)} style={styles.appButtonContainer}>
+          {/* <TouchableOpacity onPress={() => togglePasswordVisibility(item.id)} style={styles.appButtonContainer}>
+            <Text style={styles.appButtonText}>{passwordVisibility[item.id] ? 'Hide' : 'Show'}</Text>
+          </TouchableOpacity> */}
+          <TouchableOpacity onPress={() => copyToClipboard(decryptedPasswordToShow  ? decryptedPasswordToShow : '••••••••')} style={styles.appButtonContainer}>
             <Text style={styles.appButtonText}>Copy</Text>
           </TouchableOpacity>
-          <Text style={styles.itemTextStyle}>Decrypted Password: {decryptData(item.encryptedPassword, item.salt)}</Text>
           <Text style={styles.itemTextStyle}>Encrypted Password: {item.encryptedPassword}</Text>
           <Text style={styles.itemTextStyle}>Salt: {item.salt}</Text>
           <Text style={styles.itemTextStyle}>id: {item.id}</Text>
@@ -199,6 +241,37 @@ export default function App() {
       keyExtractor={item => item.id} // 指定每一項數據的唯一鍵值，這裡使用每個項目的id作為唯一鍵
       extraData={selectedId} // 當selectedId變化時，會觸發列表重新渲染，確保選中狀態的更新能夠正確顯示
       />
+      <View style={styles.centeredView}>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isPromptVisible}
+        onRequestClose={() => {
+          setIsPromptVisible(!isPromptVisible);
+          setTempMasterPassword('');
+        }}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null} 
+            <TextInput
+              secureTextEntry
+              style={styles.modalText}
+              placeholder="Enter Master Password"
+              onChangeText={text => setTempMasterPassword(text)}
+              value={tempMasterPassword}
+            />
+            <Button
+              title="Decrypt"
+              onPress={() => {
+                // setIsPromptVisible(!isPromptVisible);
+                decryptAndShowPassword(); // Call the decrypt function here
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
+      </View>
     </View>
   );
 }
@@ -247,5 +320,50 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     alignSelf: "center",
     textTransform: "uppercase"
+  },
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 22,
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  button: {
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+  },
+  buttonOpen: {
+    backgroundColor: '#F194FF',
+  },
+  buttonClose: {
+    backgroundColor: '#2196F3',
+  },
+  textStyle: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 10,
   },
 });
