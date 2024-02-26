@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 contract EmployeeContract {
     address public employee;
-    bool public taskCompleted;
+    string private jsonData; // Variable to store JSON data
 
     modifier onlyEmployee() {
         require(msg.sender == employee, "Not authorized");
@@ -12,17 +12,16 @@ contract EmployeeContract {
 
     constructor(address _employee) {
         employee = _employee;
-        taskCompleted = false; // Initialize task as not completed
     }
 
-    // Function to mark a task as completed
-    function doSomething() public onlyEmployee {
-        taskCompleted = true;
-        // Additional logic can be added here
-        // For example, emitting an event to notify the system of the task completion
-        emit TaskCompleted(employee, block.timestamp);
+    // Function to upload JSON data
+    function uploadData(string calldata _jsonData) public onlyEmployee {
+        jsonData = _jsonData;
     }
 
-    // Event declaration for task completion
-    event TaskCompleted(address employee, uint256 timestamp);
+    // Function to retrieve JSON data
+    function retrieveData() public onlyEmployee view returns (string memory) {
+        require(bytes(jsonData).length > 0, "No data available");
+        return jsonData;
+    }
 }
