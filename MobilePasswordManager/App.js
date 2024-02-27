@@ -1,18 +1,22 @@
 import { StatusBar } from 'expo-status-bar'
 import { Modal, Pressable, StyleSheet, View, TextInput, Button, FlatList, Text, TouchableOpacity, Alert } from 'react-native'
 import '@walletconnect/react-native-compat'
-import { WagmiConfig, useAccount } from 'wagmi'
+import { WagmiConfig, useAccount, useContractRead, useContractWrite, usePrepareContractWrite,} from 'wagmi'
 import { sepolia} from 'viem/chains'
 import { createWeb3Modal, defaultWagmiConfig, Web3Modal, W3mButton} from '@web3modal/wagmi-react-native'
-import {PROJECT_ID} from "@env"
+import {PROJECT_ID, EMPLOYEE_CONTRACT_ADDRESS} from "@env"
 import React, { useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import CryptoJS from "rn-crypto-js";
 import * as Clipboard from 'expo-clipboard'
 
+import employee from "./src/abis/employee.json";
+import { G } from 'react-native-svg'
+
 // 1. Get projectId at https://cloud.walletconnect.com
 const projectId = PROJECT_ID
 console.log('projectId', PROJECT_ID)
+const WalletAddress = ''
 
 // 2. Create config
 const metadata = {
@@ -37,6 +41,38 @@ createWeb3Modal({
   wagmiConfig
 })
 
+function GetAccount({ onAddressUpdate }) {
+  const { address, isConnecting, isDisconnected } = useAccount();
+
+  useEffect(() => {
+    if (address) {
+      onAddressUpdate(address);
+    }
+  }, [address, onAddressUpdate]);  
+
+  return (
+    <View>
+      {isConnecting ? <Text>Connecting</Text> : isDisconnected ? <Text>Disconnected</Text> : <Text>{address}</Text>}  
+    </View>
+  )
+}
+
+function RetrieveData({ account }) {
+  const { data, error, loading } = useContractRead({
+    address: EMPLOYEE_CONTRACT_ADDRESS,
+    abi: employee,
+    functionName: 'retrieveData',
+    account : account,
+  });
+
+  console.log('data', data)
+  return (
+    <View>{loading ? <Text>Loading</Text> : error ? <Text>Error: {error.message}</Text> : <Text>RetrieveData: {data}</Text>}</View>
+  )
+}
+
+function UploadData(){}
+
 export default function App() {
   const [website, setWebsite] = useState('');
   const [username, setUsername] = useState('');
@@ -46,6 +82,8 @@ export default function App() {
   const [isMasterPasswordSet, setIsMasterPasswordSet] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [passwordVisibility, setPasswordVisibility] = useState({});
+  const [accountAddress, setAccountAddress] = useState('');
+  const [contractAddress, setContractAddress] = useState('');
 
   // Pop up Prompt window to enter master password
   const [isPromptVisible, setIsPromptVisible] = useState(false);
@@ -86,7 +124,7 @@ export default function App() {
       keySize: 256 / 32,
       iterations: 1000
     }).toString();
-    console.log('enc-key', key);
+    // console.log('enc-key', key);
     const encryptedPassword = CryptoJS.AES.encrypt(password, key).toString();
     return { encryptedPassword, salt };
   };
@@ -125,8 +163,8 @@ export default function App() {
 
   const saveCredentials = async () => {
     await SecureStore.setItemAsync('credentials', JSON.stringify(credentials));
-    console.log('save: credentials', credentials);
-    console.log('save: json.stringify(credentials)', JSON.stringify(credentials));
+    // console.log('save: credentials', credentials);
+    // console.log('save: json.stringify(credentials)', JSON.stringify(credentials));
   };
 
   const loadCredentials = async () => {
@@ -134,8 +172,8 @@ export default function App() {
     if (result) {
       setCredentials(JSON.parse(result));
     }
-    console.log('load: result', result);
-    console.log('load: json.parse(result)', JSON.parse(result));
+    // console.log('load: result', result);
+    // console.log('load: json.parse(result)', JSON.parse(result));
   };
 
   // Alert.alert don't work in andorid emulator. need to modify alert method.
@@ -146,7 +184,7 @@ export default function App() {
     }
     try {
       await SecureStore.setItemAsync('masterPassword', masterPassword);
-      console.log('save: masterPassword', masterPassword);
+      // console.log('save: masterPassword', masterPassword);
       setIsMasterPasswordSet(true);
       // Alert.alert('Success', 'Master password is set successfully.');
     } catch (error) {
@@ -244,6 +282,10 @@ export default function App() {
     </TouchableOpacity>
   );
 
+  const handleAddressUpdate = (newAddress) => {
+    setAccountAddress(newAddress);
+  };
+
   return (
     <View style={styles.container}>
       {!isMasterPasswordSet ? (
@@ -263,9 +305,11 @@ export default function App() {
         <Text style={[styles.text]}>masterPassword is {masterPassword}</Text>
       )}
       <WagmiConfig config={wagmiConfig}>
-        <View style={styles.container}>
+        <View style={[styles.container, styles.marginVertical]}>
           <W3mButton balance='show'/>
           <StatusBar style="auto" />
+          <GetAccount onAddressUpdate={handleAddressUpdate} />
+          <RetrieveData account={accountAddress}/>
         </View>
       <Web3Modal />
       </WagmiConfig>
@@ -406,5 +450,11 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     marginBottom: 10,
+  },
+  marginVertical: {
+    marginVertical: 10,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
