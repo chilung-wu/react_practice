@@ -43,12 +43,17 @@ createWeb3Modal({
 
 function GetAccount({ onAddressUpdate }) {
   const { address, isConnecting, isDisconnected } = useAccount();
-
+  console.log('address ', address)
   useEffect(() => {
-    if (address) {
+    if (isDisconnected) {
+      onAddressUpdate('');
+    } else if (address) {
       onAddressUpdate(address);
     }
-  }, [address, onAddressUpdate]);  
+  }, [address, isDisconnected, onAddressUpdate]);  
+
+ //  finished : receive data not remove after logout,  
+ // Todo : set receive data as credential in usestate( ovewrite it?)
 
   return (
     <View>
@@ -309,7 +314,7 @@ export default function App() {
           <W3mButton balance='show'/>
           <StatusBar style="auto" />
           <GetAccount onAddressUpdate={handleAddressUpdate} />
-          <RetrieveData account={accountAddress}/>
+          {accountAddress && <RetrieveData account={accountAddress}/>}
         </View>
       <Web3Modal />
       </WagmiConfig>
