@@ -62,21 +62,76 @@ function GetAccount({ onAddressUpdate }) {
   )
 }
 
-function RetrieveData({ account }) {
-  const { data, error, loading } = useContractRead({
+function RetrieveData({ account, setCredentials }) {
+  const [triggerFetch, setTriggerFetch] = useState(false);
+  const { data, error, isLoading } = useContractRead({
     address: EMPLOYEE_CONTRACT_ADDRESS,
     abi: employee,
     functionName: 'retrieveData',
-    account : account,
+    account: account,
+    enabled: triggerFetch, // This tells the hook to fetch data when triggerFetch is true
   });
+  console.log('RetrieveData: ', data)
 
-  console.log('data', data)
+  // Backup, sync to local storage
+  // Effect to parse and set credentials after data is fetched
+  useEffect(() => {
+    if (data && !error) {
+      // Assuming the data is returned as a JSON string
+      try {
+        const credentials = JSON.parse(data);
+        setCredentials(credentials);
+        setTriggerFetch(false); // Reset trigger to avoid refetching
+      } catch (parseError) {
+        console.error("Failed to parse credentials:", parseError);
+      }
+    }
+  }, [data, error, setCredentials]);
+
+  const handleRetrieveData = () => {
+    setTriggerFetch(true);
+  };
+
   return (
-    <View>{loading ? <Text>Loading</Text> : error ? <Text>Error: {error.message}</Text> : <Text>RetrieveData: {data}</Text>}</View>
-  )
+    <View style={styles.buttonContainer}>
+      <TouchableOpacity
+        style={[styles.button, styles.uploadButton]}
+        onPress={handleRetrieveData}
+        disabled={isLoading}
+      >
+        <Text style={styles.buttonText}>Restore</Text>
+      </TouchableOpacity>
+      </View>
+  );
 }
 
-function UploadData(){}
+function UploadData({ account, credentials }){
+  const  { config , error: prepareError} = usePrepareContractWrite({
+    address: EMPLOYEE_CONTRACT_ADDRESS,
+    abi: employee,
+    functionName: 'uploadData',
+    account: account,
+    args: [JSON.stringify(credentials)],
+  });
+  const { data, isLoading, isSuccess, write, error: writeError} = useContractWrite(config);
+  console.log('Transaction hash: ', data)
+
+  return (
+    <View style={styles.buttonContainer}>
+      <TouchableOpacity
+        style={[styles.button, styles.uploadButton]}
+        onPress={() => write?.()}
+        disabled={!write}
+      >
+        <Text style={styles.buttonText}>Upload Credentials</Text>
+      </TouchableOpacity>
+      {isLoading && <Text>Uploading...</Text>}
+      {isSuccess && <Text>Upload Successful: {"\n"}Transaction:{JSON.stringify(data.hash)}</Text>}
+      {prepareError && <Text>Error Preparing: {prepareError.message}</Text>}
+      {writeError && <Text>Error Writing: {writeError.message}</Text>}
+    </View>
+  );
+}
 
 export default function App() {
   const [website, setWebsite] = useState('');
@@ -310,11 +365,11 @@ export default function App() {
         <Text style={[styles.text]}>masterPassword is {masterPassword}</Text>
       )}
       <WagmiConfig config={wagmiConfig}>
-        <View style={[styles.container, styles.marginVertical]}>
+        <View style={styles.marginVertical}>
           <W3mButton balance='show'/>
-          <StatusBar style="auto" />
           <GetAccount onAddressUpdate={handleAddressUpdate} />
-          {accountAddress && <RetrieveData account={accountAddress}/>}
+          {accountAddress && <RetrieveData account={accountAddress} setCredentials={setCredentials}/>}
+          <UploadData account={accountAddress} credentials={credentials} />
         </View>
       <Web3Modal />
       </WagmiConfig>
@@ -342,7 +397,7 @@ export default function App() {
         }}
       >
         <View style={styles.centeredView}>
-          <View style={styles.modalView}>
+          <View style={styles.modalView}> 
             {error ? <Text style={styles.errorText}>{error}</Text> : null} 
             <TextInput
               secureTextEntry
@@ -367,99 +422,116 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 50,
-    paddingHorizontal: 20,
+  container: { // 容器樣式
+    flex: 1, // 彈性比例為 1，使其填滿父元件的空間
+    paddingTop: 50, // 上邊距 50
+    paddingHorizontal: 20, // 左右邊距 20
   },
-  input: {
-    height: 40,
-    marginBottom: 20,
-    borderWidth: 1,
-    padding: 10,
+  input: { // 輸入框樣式
+    height: 40, // 高度 40
+    marginBottom: 20, // 下邊距 20
+    borderWidth: 1, // 邊框寬度 1
+    padding: 10, // 內填充 10
   },
-  item: {
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    padding: 10,
-    marginVertical: 8,
-    backgroundColor: '#f9c2ff',
+  item: { // 項目樣式
+    flexDirection: 'column', // 排列方向為垂直（列）
+    justifyContent: 'space-between', // 子元素間距平均分布
+    padding: 10, // 內填充 10
+    marginVertical: 8, // 垂直外邊距 8
+    backgroundColor: '#f9c2ff', // 背景色為淺紫色
   },
-  deleteButton: {
-    color: 'red',
-    marginTop: 10,
+  deleteButton: { // 刪除按鈕樣式
+    color: 'red', // 文字顏色紅色
+    marginTop: 10, // 上邊距 10
   },
-  text: {
-    fontSize: 30,
+  text: { // 文本樣式
+    fontSize: 30, // 字體大小 30
   },
-  itemTextStyle : {
-    fontSize: 20,
-    fontWeight: 'bold',
+  itemTextStyle: { // 項目文本樣式
+    fontSize: 20, // 字體大小 20
+    fontWeight: 'bold', // 字重粗體
   },
-  appButtonContainer: {
-    elevation: 8,
-    backgroundColor: "#009688",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginTop: 10,
+  appButtonContainer: { // 應用按鈕容器樣式
+    elevation: 8, // 陰影高度 8
+    backgroundColor: "#009688", // 背景色為深綠色
+    borderRadius: 10, // 邊框圓角 10
+    paddingVertical: 10, // 垂直內填充 10
+    paddingHorizontal: 12, // 水平內填充 12
+    marginTop: 10, // 上邊距 10
   },
-  appButtonText: {
-    fontSize: 18,
-    color: "#fff",
-    fontWeight: "bold",
-    alignSelf: "center",
-    textTransform: "uppercase"
+  appButtonText: { // 應用按鈕文本樣式
+    fontSize: 18, // 字體大小 18
+    color: "#fff", // 文字顏色白色
+    fontWeight: "bold", // 字重粗體
+    alignSelf: "center", // 自我對齊至中心
+    textTransform: "uppercase" // 文字轉換為大寫
   },
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 22,
+  centeredView: { // 居中視圖樣式
+    // flex: 1, // 彈性比例為 1
+    justifyContent: 'center', // 內容居中對齊
+    alignItems: 'center', // 項目居中對齊
+    marginTop: 22, // 上邊距 22
   },
-  modalView: {
-    margin: 20,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 35,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+  modalView: { // 模態視窗樣式
+    margin: 20, // 外邊距 20
+    backgroundColor: 'white', // 背景色白色
+    borderRadius: 20, // 邊框圓角 20
+    padding: 35, // 內填充 35
+    alignItems: 'center', // 項目居中對齊
+    shadowColor: '#000', // 陰影顏色黑色
+    shadowOffset: { // 陰影偏移
+      width: 0, // 寬度 0
+      height: 2, // 高度 2
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.25, // 陰影透明度
+    shadowRadius: 4, // 陰影半徑
+    elevation: 5, // 陰影高度 5
   },
-  button: {
-    borderRadius: 20,
-    padding: 10,
-    elevation: 2,
+  buttonContainer: { // 按鈕容器樣式
+    marginVertical: 5, // 垂直外邊距 5
+    // zIndex: 1 // 層疊順序 1
   },
-  buttonOpen: {
-    backgroundColor: '#F194FF',
+  uploadButton: { // 上傳按鈕樣式
+    backgroundColor: '#2196F3', // 背景色藍色
+    minWidth: 100, // 設定最小寬度
+    maxWidth: 200, // 設定最大寬度
+    alignSelf: 'center', // 自我對齊至中心
+    padding: 5, // 內填充 5
+    borderRadius: 5, // 邊框圓角 5
   },
-  buttonClose: {
-    backgroundColor: '#2196F3',
+  button: { // 按鈕樣式
+    elevation: 2, // 陰影高度 2
   },
-  textStyle: {
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
+  buttonText: { // 按鈕文本樣式
+    fontSize: 15, // 字體大小 15
+    fontWeight: 'bold', // 字重粗體
+    textAlign: 'center', // 文本居中對齊
+    color: 'white', // 文本顏色白色
   },
-  modalText: {
-    marginBottom: 15,
-    textAlign: 'center',
+  buttonOpen: { // 打開按鈕樣式
+    backgroundColor: '#F194FF', // 背景色淺紫色
   },
-  errorText: {
-    color: 'red',
-    marginBottom: 10,
+  buttonClose: { // 關閉按鈕樣式
+    backgroundColor: '#2196F3', // 背景色藍色
   },
-  marginVertical: {
-    marginVertical: 10,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+  textStyle: { // 文本樣式
+    color: 'white', // 文字顏色白色
+    fontWeight: 'bold', // 字重粗體
+    textAlign: 'center', // 文本居中對齊
+  },
+  modalText: { // 模態文本樣式
+    marginBottom: 15, // 下邊距 15
+    textAlign: 'center', // 文本居中對齊
+  },
+  errorText: { // 錯誤文本樣式
+    color: 'red', // 文字顏色紅色
+    marginBottom: 10, // 下邊距 10
+  },
+  marginVertical: { // 垂直邊距樣式
+    marginVertical: 10, // 垂直外邊距 10
+    display: "flex", // 顯示方式為彈性盒子
+    alignItems: "center", // 項目居中對齊
+    justifyContent: "center", // 內容居中對齊
   },
 });
+
