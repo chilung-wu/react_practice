@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import CryptoJS from "rn-crypto-js";
 import * as Clipboard from 'expo-clipboard'
+import axios from 'axios';
 
 import employee from "./src/abis/employee.json";
 import { G } from 'react-native-svg'
@@ -132,6 +133,18 @@ function UploadData({ account, credentials }){
     </View>
   );
 }
+
+// Demo: send message to server
+const sendMessageToServer = async () => {
+  try {
+    const response = await axios.post('http://10.0.2.2:5000/hello', {
+      message: "hello"
+    });
+    alert(response.data.message);
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 export default function App() {
   const [website, setWebsite] = useState('');
@@ -364,6 +377,7 @@ export default function App() {
       ) : (
         <Text style={[styles.text]}>masterPassword is {masterPassword}</Text>
       )}
+      <Button title="Send Message" onPress={sendMessageToServer} />
       <WagmiConfig config={wagmiConfig}>
         <View style={styles.marginVertical}>
           <W3mButton balance='show'/>
