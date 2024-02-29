@@ -11,6 +11,7 @@ load_dotenv()
 login_url = "https://ecvip.pchome.com.tw/login/v3/login.htm"
 # test_url = "https://ecvip.pchome.com.tw/login/v3/login.htm"
 order_url = "https://ecvip.pchome.com.tw/web/order/all"
+home_url = "https://ecvip.pchome.com.tw/"
 username = os.getenv("username")
 password = os.getenv("password")
 
@@ -27,32 +28,37 @@ options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 
 # # Adding headless mode to run the browser in the background
-# options.add_argument("--headless")
+options.add_argument("--headless")
 
 
 def main():
     driver = webdriver.Chrome(options=options)
 
     try:
-        # Get and print the HTML source of the page
         driver.get(login_url)
-        # html_source = driver.page_source
-        # print(html_source)
-
-        usernameInput = driver.find_element(By.ID, "loginAcc")
-        passwordInput = driver.find_element(By.ID, "loginPwd")
+        usernameInput = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "loginAcc"))
+        )
+        passwordInput = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "loginPwd"))
+        )
 
         usernameInput.send_keys(username)
         signinBtn = driver.find_element(By.ID, "btnKeep")
         signinBtn.send_keys(Keys.ENTER)
-        time.sleep(3)  # load password input page  
 
+        # 等待密碼輸入框可互動
+        WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.ID, "loginPwd"))
+        )
         passwordInput.send_keys(password)
 
         signinBtn = driver.find_element(By.ID, "btnLogin")
         signinBtn.send_keys(Keys.ENTER)
 
-        time.sleep(3)  # redirect to home page
+        WebDriverWait(driver, 10).until(
+            EC.url_to_be(home_url)
+        )
 
         driver.get(order_url)
         time.sleep(3)  # load order page
