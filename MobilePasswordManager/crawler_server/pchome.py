@@ -61,6 +61,10 @@ def main():
         )
 
         driver.get(order_url)
+        # WebDriverWait(driver, 10).until(
+        #     EC.presence_of_element_located((By.ID, "listOrder"))
+        # )
+
         time.sleep(3)  # load order page
 
         # Initialize an empty list to store dictionaries
@@ -76,69 +80,54 @@ def main():
             except:
                 return False
 
-        # while not The_End_page:
+        def has_next_page_and_click(driver):
+            try:
+                next_page_btn = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, '//span[@id="next_page"]/a[text()="下一頁"]'))
+                )
+                next_page_btn.click()
+
+                WebDriverWait(driver, 10).until(
+                    EC.visibility_of_element_located((By.ID, "listOrder"))
+                )
+                return True
+            except:
+                return False
+
+
+        def extract_order_info(table):
+            orders = []
+            rows = table.find_elements(By.CSS_SELECTOR, "tr.content_tr")
+            for row in rows:
+                cells = row.find_elements(By.CSS_SELECTOR, "td")
+                if len(cells) < 5:
+                    continue
+                order_info = {
+                    '訂單編號': cells[0].text,
+                    '日期': cells[1].text,
+                    '訂單狀態': cells[2].text,
+                    '總價': cells[3].text,
+                    '付款': cells[4].text,
+                    '配送狀態': cells[5].text,
+                }
+                orders.append(order_info)
+            return orders
+
 
         Has_Next_page = True
 
         while Has_Next_page:
-
-        #     next_page_link = driver.find_element(By.ID, 'next_page')
-        #     if next_page_link:
-        #         next_page_link.click()  # Click the link to go to the next page
-        #         time.sleep(2)
-        #     else:
-        #         The_End_page = True  # Set the flag to end the loop
-        # input("dfsdfsd???")
-
             # Find the div with id "listOrder"
             list_order_div = driver.find_element(By.ID, "listOrder")
             # Find all the tables with class "order_table_y" within the div
             tables = list_order_div.find_elements(By.CSS_SELECTOR, "table.order_table_y")
             # Loop through each table and extract information
             for table in tables:
-                order_info = {}
-                
-                # Find all rows with class "content_tr" within the table
-                rows = table.find_elements(By.CSS_SELECTOR, "tr.content_tr")
-                
-                for row in rows:
-                    cells = row.find_elements(By.CSS_SELECTOR, "td")
-                    
-                    if (len(cells) < 5):
-                        continue
-
-                    # print(cells)
-
-                    # Extract and store information in dictionary format
-                    order_info['訂單編號'] = cells[0].text
-                    # print(cells[0].text)
-                    order_info['日期'] = cells[1].text
-                    # print(cells[1].text)
-                    order_info['訂單狀態'] = cells[2].text
-                    # print(cells[2].text)
-                    order_info['總價'] = cells[3].text
-                    # print(cells[3].text)
-                    order_info['付款'] = cells[4].text
-                    # print(cells[4].text)
-                    order_info['配送狀態'] = cells[5].text
-                    # print(cells[5].text)
-
-                    # Append the dictionary to the list of orders
-                    orders.append(order_info)
-                    # print(order_info)
+                orders += extract_order_info(table)
             
             # Check if the "下一頁" link exists
-            Has_Next_page = has_next_page()
-        #     # next_page_link = driver.find_element(By.LINK_TEXT, '下一頁')
-        #     next_page_link = driver.find_element(By.ID, 'next_page')
-        #     if next_page_link:
-        #         next_page_link.click()  # Click the link to go to the next page
-        #         time.sleep(2)
-        #     else:
-        #         The_End_page = True  # Set the flag to end the loop
-            
-        # # except NoSuchElementException:
-        # #     The_End_page = True  # Set the flag to end the loop
+            Has_Next_page = has_next_page_and_click(driver)
+            # Has_Next_page = has_next_page()
             
         # Print the list of orders
         print(f'Total numbers of orders: {len(orders)}')
