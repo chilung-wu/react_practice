@@ -10,6 +10,7 @@ import * as SecureStore from 'expo-secure-store';
 import CryptoJS from "rn-crypto-js";
 import * as Clipboard from 'expo-clipboard'
 import axios from 'axios';
+import { Picker } from '@react-native-picker/picker';
 
 import employee from "./src/abis/employee.json";
 import { G } from 'react-native-svg'
@@ -358,9 +359,9 @@ const HomePage = ({ navigation }) => {
       }}
     >
       <Text style={styles.itemTextStyle}>Website: {item.website}</Text>
+      <Text style={styles.itemTextStyle}>Username: {item.username}</Text>
       {selectedId === item.id && (
         <>
-          <Text style={styles.itemTextStyle}>Username: {item.username}</Text>
           {/* <Text style={styles.itemTextStyle}>Password: {item.password}</Text> */}
           {/* <Text style={styles.itemTextStyle}>Password: {passwordVisibility[item.id] ? item.password : '••••••••'}</Text> */}
           {/* <Text style={styles.itemTextStyle}>Password: {passwordVisibility[item.id] ? decryptData(item.encryptedPassword, item.salt) : '••••••••'}</Text> */}
@@ -408,6 +409,7 @@ const HomePage = ({ navigation }) => {
         <Text style={[styles.text]}>masterPassword is {masterPassword}</Text>
       )}
       <Button title="Send Message" onPress={sendMessageToServer} />
+      <Text>{"\n"}</Text>
       <Button title="Fetch Orders" onPress={() => navigation.navigate('Orders')} />
       <WagmiConfig config={wagmiConfig}>
         <View style={styles.marginVertical}>
@@ -419,7 +421,21 @@ const HomePage = ({ navigation }) => {
       <Web3Modal />
       </WagmiConfig>
       <Text>{"\n"}</Text>
-      <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Website URL" value={website} onChangeText={setWebsite} />
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={website}
+          style={styles.picker}
+          onValueChange={(itemValue, itemIndex) =>
+            setWebsite(itemValue)
+          }>
+          <Picker.Item label="請選擇網站" value="" />
+          <Picker.Item label="PChome" value="PChome" />
+          <Picker.Item label="樂天市場" value="樂天市場" />
+          <Picker.Item label="東森購物" value="東森購物" />
+          <Picker.Item label="Momo" value="Momo" />
+        </Picker>
+      </View>
+      {/* <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Website URL" value={website} onChangeText={setWebsite} /> */}
       <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Username" value={username} onChangeText={setUsername} />
       <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
       <Button title="Add Credential" onPress={addCredential} />
@@ -580,6 +596,14 @@ const styles = StyleSheet.create({
     display: "flex", // 顯示方式為彈性盒子
     alignItems: "center", // 項目居中對齊
     justifyContent: "center", // 內容居中對齊
+  },
+  pickerContainer: { // 選擇器容器樣式
+    borderWidth: 2, // 設置邊框寬度
+    borderColor: 'black', // 設置邊框顏色
+    borderRadius: 5, // 設置邊框圓角
+    overflow: 'hidden', // 確保子組件不會超出邊框圓角
+    marginBottom: 15, // 下邊距 20
+
   },
 });
 
