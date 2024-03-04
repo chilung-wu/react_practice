@@ -314,8 +314,8 @@ const HomePage = ({ navigation }) => {
     setAccountAddress(newAddress);
   };
 
-  return (
-    <View style={styles.container}>
+  const ListHeader = () => (
+    <View>
       <Button title="Send Message" onPress={sendMessageToServer} />
       {/* <Text>{"\n"}</Text> */}
       <Button title="Fetch Orders" onPress={() => navigation.navigate('Orders')} />
@@ -350,8 +350,14 @@ const HomePage = ({ navigation }) => {
       <Button title="Add Credential" onPress={addCredential} />
       <Text>{"\n"}</Text>
       <Button title="Clear Data" onPress={_clearData}/>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
       <FlatList // FlatList是一個高效的滾動列表元件，用於顯示一個滾動的數據列表
       data={credentials} // 設定這個列表顯示的數據源，credentials是一個包含多個項目的數組
+      ListHeaderComponent={ListHeader} // 設定列表頭部元件，這裡使用了一個自定義的ListHeader組件
       renderItem={renderItem} // 指定如何渲染每一項數據，這裡傳入了上面定義的renderItem函數
       keyExtractor={item => item.id} // 指定每一項數據的唯一鍵值，這裡使用每個項目的id作為唯一鍵
       extraData={selectedId} // 當selectedId變化時，會觸發列表重新渲染，確保選中狀態的更新能夠正確顯示
