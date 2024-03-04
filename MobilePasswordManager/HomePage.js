@@ -174,7 +174,8 @@ const sendMessageToServer = async () => {
 // }
   
 
-export default function App() {
+// export default function App() {
+const HomePage = ({ navigation }) => {
   const [website, setWebsite] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -384,28 +385,6 @@ export default function App() {
     </TouchableOpacity>
   );
 
-  const OrderItem = ({ item }) => (
-    <View style={styles.item}>
-      <Text style={styles.titleText}>訂單編號: {item.訂單編號}</Text>
-      <Text>日期: {item.日期}</Text>
-      <Text>訂單狀態: {item.訂單狀態}</Text>
-      <Text>總價: {item.總價}</Text>
-      <Text>付款方式: {item.付款}</Text>
-      <Text>配送狀態: {item.配送狀態}</Text>
-      <Text>產品名稱: {item.產品名稱}</Text>
-      <Text>物流資訊: {item.物流資訊}</Text>
-    </View>
-  );
-
-  const fetchOrders = async () => {
-    try {
-      const response = await axios.get('http://10.0.2.2:5000/getOrders');
-      setOrders(response.data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
   const handleAddressUpdate = (newAddress) => {
     setAccountAddress(newAddress);
   };
@@ -429,13 +408,7 @@ export default function App() {
         <Text style={[styles.text]}>masterPassword is {masterPassword}</Text>
       )}
       <Button title="Send Message" onPress={sendMessageToServer} />
-      {/* <Button title="Fetch Orders" onPress={fetchOrders} />
-      <FlatList
-        data={orders}
-        renderItem={OrderItem}
-        keyExtractor={item => item.訂單編號}
-        style={styles.list}
-      /> */}
+      <Button title="Fetch Orders" onPress={() => navigation.navigate('Orders')} />
       <WagmiConfig config={wagmiConfig}>
         <View style={styles.marginVertical}>
           <W3mButton balance='show'/>
@@ -466,6 +439,7 @@ export default function App() {
         onRequestClose={() => {
           setIsPromptVisible(!isPromptVisible);
           setTempMasterPassword('');
+          setError('');
         }}
       >
         <View style={styles.centeredView}>
@@ -492,6 +466,8 @@ export default function App() {
     </View>
   );
 }
+
+export default HomePage;
 
 const styles = StyleSheet.create({
   container: { // 容器樣式
