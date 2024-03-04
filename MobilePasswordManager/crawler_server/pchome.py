@@ -66,6 +66,12 @@ def navigate_to_orders(driver, order_url):
     )
 
 def has_next_page_and_click(driver):
+
+    # 檢查 "下一頁" 按鈕是否存在
+    next_page_btns = driver.find_elements(By.XPATH, '//span[@id="next_page"]/a[text()="下一頁"]')
+    if len(next_page_btns) == 0:
+        return False
+    
     try:
         next_page_btn = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, '//span[@id="next_page"]/a[text()="下一頁"]'))
@@ -98,7 +104,7 @@ def extract_order_info(table, driver):
         '日期': cells[1].text,
         '訂單狀態': cells[2].text,
         '總價': cells[3].text,
-        '付款': cells[4].text,
+        '付款': cells[4].text.split('\n')[0],
         '配送狀態': cells[5].text,
         '產品名稱': product_name,
         '物流資訊': logistics_info
