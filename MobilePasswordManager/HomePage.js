@@ -147,47 +147,15 @@ const sendMessageToServer = async () => {
   }
 };
 
-
-// const OrdersScreen = () => {
-//   const [orders, setOrders] = useState([]);
-
-//   useEffect(() => {
-//     const fetchOrders = async () => {
-//       try {
-//         const response = await axios.get('http://10.0.2.2:5000/getOrders');
-//         setOrders(response.data);
-//       } catch (error) {
-//         console.error(error);
-//       }
-//     };
-
-//     fetchOrders();
-//   }, []);
-
-//   return (
-//     <FlatList
-//       data={orders}
-//       renderItem={({ item }) => <OrderItem item={item} />}
-//       keyExtractor={item => item.訂單編號}
-//       style={styles.list}
-//     />
-//   );
-// }
-  
-
 // export default function App() {
 const HomePage = ({ navigation }) => {
   const [website, setWebsite] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [credentials, setCredentials] = useState([]);
-  const [masterPassword, setMasterPassword] = useState('');
-  const [isMasterPasswordSet, setIsMasterPasswordSet] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-  const [passwordVisibility, setPasswordVisibility] = useState({});
   const [accountAddress, setAccountAddress] = useState('');
   const [contractAddress, setContractAddress] = useState('');
-  const [orders, setOrders] = useState([]);
 
   // Pop up Prompt window to enter master password
   const [isPromptVisible, setIsPromptVisible] = useState(false);
@@ -199,7 +167,6 @@ const HomePage = ({ navigation }) => {
   // initialize, load credentials and master password
   useEffect(() => {
     loadCredentials();
-    loadMasterPassword();
   }, []);
 
   // save credentials when credentials change
@@ -215,16 +182,10 @@ const HomePage = ({ navigation }) => {
     }, 30000); // 30 seconds
   };
 
-  const togglePasswordVisibility = (id) => {
-    setPasswordVisibility(prevState => ({
-      ...prevState,
-      [id]: !prevState[id],
-    }));
-  };
 
   const encryptData = () => {
     const salt = CryptoJS.lib.WordArray.random(128 / 8).toString();
-    const key = CryptoJS.PBKDF2(masterPassword, salt, { 
+    const key = CryptoJS.PBKDF2(tempMasterPassword, salt, { 
       keySize: 256 / 32,
       iterations: 1000
     }).toString();
@@ -280,35 +241,6 @@ const HomePage = ({ navigation }) => {
     // console.log('load: json.parse(result)', JSON.parse(result));
   };
 
-  // Alert.alert don't work in andorid emulator. need to modify alert method.
-  const saveMasterPassword = async () => {
-    if (masterPassword.trim() === '') {
-      Alert.alert('Error', 'Master password cannot be empty.');
-      return;
-    }
-    try {
-      await SecureStore.setItemAsync('masterPassword', masterPassword);
-      // console.log('save: masterPassword', masterPassword);
-      setIsMasterPasswordSet(true);
-      // Alert.alert('Success', 'Master password is set successfully.');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save the master password.');
-    }
-  };
-
-  const loadMasterPassword = async () => {
-    try {
-      const savedMasterPassword = await SecureStore.getItemAsync('masterPassword');
-      console.log('load: savedMasterPassword', savedMasterPassword);
-      if (savedMasterPassword) {
-        setMasterPassword(savedMasterPassword);
-        setIsMasterPasswordSet(true);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load the master password.');
-    }
-  };
-
   // save current credential to SecureStore
   // TODO: 如果id僅用於keyExtractor，可以考慮使用其他唯一標識符（如生成的UUID），這樣就不需要在每次刪除操作後更新它們。
   const addCredential = () => {
@@ -320,6 +252,7 @@ const HomePage = ({ navigation }) => {
     setWebsite('');
     setUsername('');
     setPassword('');
+    setTempMasterPassword('');
   };
 
   const deleteCredential = async (id) => {
@@ -339,12 +272,8 @@ const HomePage = ({ navigation }) => {
     setUsername('');
     setPassword('');
     setCredentials([]);
-    setMasterPassword('');
-    setIsMasterPasswordSet(false);
     setTempMasterPassword('');
     setDecryptedPasswordToShow('');
-    setPasswordVisibility({});
-    
   };
 
   const renderItem = ({ item }) => (
@@ -362,16 +291,11 @@ const HomePage = ({ navigation }) => {
       <Text style={styles.itemTextStyle}>Username: {item.username}</Text>
       {selectedId === item.id && (
         <>
-          {/* <Text style={styles.itemTextStyle}>Password: {item.password}</Text> */}
-          {/* <Text style={styles.itemTextStyle}>Password: {passwordVisibility[item.id] ? item.password : '••••••••'}</Text> */}
-          {/* <Text style={styles.itemTextStyle}>Password: {passwordVisibility[item.id] ? decryptData(item.encryptedPassword, item.salt) : '••••••••'}</Text> */}
           <Text style={styles.itemTextStyle}>Password: {decryptedPasswordToShow  ? decryptedPasswordToShow : '••••••••'}</Text>
           <TouchableOpacity onPress={() => { setSelectedId(item.id); setIsPromptVisible(true); }} style={styles.appButtonContainer}>
             <Text style={styles.appButtonText}>Show Password</Text>
           </TouchableOpacity>
-          {/* <TouchableOpacity onPress={() => togglePasswordVisibility(item.id)} style={styles.appButtonContainer}>
-            <Text style={styles.appButtonText}>{passwordVisibility[item.id] ? 'Hide' : 'Show'}</Text>
-          </TouchableOpacity> */}
+
           <TouchableOpacity onPress={() => copyToClipboard(decryptedPasswordToShow  ? decryptedPasswordToShow : '••••••••')} style={styles.appButtonContainer}>
             <Text style={styles.appButtonText}>Copy</Text>
           </TouchableOpacity>
@@ -392,24 +316,8 @@ const HomePage = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {!isMasterPasswordSet ? (
-        <View>
-          <TextInput
-            style={[styles.input, styles.itemTextStyle]}
-            value={masterPassword}
-            onChangeText={setMasterPassword}
-            placeholder="Set Master Password"
-            secureTextEntry
-          />
-          <View style={{ marginBottom: 20 }}>
-          <Button title="Save Master Password" onPress={saveMasterPassword} />
-          </View>
-        </View>
-      ) : (
-        <Text style={[styles.text]}>masterPassword is {masterPassword}</Text>
-      )}
       <Button title="Send Message" onPress={sendMessageToServer} />
-      <Text>{"\n"}</Text>
+      {/* <Text>{"\n"}</Text> */}
       <Button title="Fetch Orders" onPress={() => navigation.navigate('Orders')} />
       <WagmiConfig config={wagmiConfig}>
         <View style={styles.marginVertical}>
@@ -420,7 +328,7 @@ const HomePage = ({ navigation }) => {
         </View>
       <Web3Modal />
       </WagmiConfig>
-      <Text>{"\n"}</Text>
+      {/* <Text>{"\n"}</Text> */}
       <View style={styles.pickerContainer}>
         <Picker
           selectedValue={website}
@@ -438,6 +346,7 @@ const HomePage = ({ navigation }) => {
       {/* <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Website URL" value={website} onChangeText={setWebsite} /> */}
       <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Username" value={username} onChangeText={setUsername} />
       <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
+      <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Master Password" value={tempMasterPassword} onChangeText={setTempMasterPassword} secureTextEntry />
       <Button title="Add Credential" onPress={addCredential} />
       <Text>{"\n"}</Text>
       <Button title="Clear Data" onPress={_clearData}/>
@@ -604,6 +513,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden', // 確保子組件不會超出邊框圓角
     marginBottom: 15, // 下邊距 20
 
+  },
+  picker: { // 選擇器樣式
+    fontSize: 20, // 字體大小 20
+    fontWeight: 'bold', // 字重粗體
   },
 });
 
