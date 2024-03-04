@@ -146,6 +146,34 @@ const sendMessageToServer = async () => {
   }
 };
 
+
+// const OrdersScreen = () => {
+//   const [orders, setOrders] = useState([]);
+
+//   useEffect(() => {
+//     const fetchOrders = async () => {
+//       try {
+//         const response = await axios.get('http://10.0.2.2:5000/getOrders');
+//         setOrders(response.data);
+//       } catch (error) {
+//         console.error(error);
+//       }
+//     };
+
+//     fetchOrders();
+//   }, []);
+
+//   return (
+//     <FlatList
+//       data={orders}
+//       renderItem={({ item }) => <OrderItem item={item} />}
+//       keyExtractor={item => item.訂單編號}
+//       style={styles.list}
+//     />
+//   );
+// }
+  
+
 export default function App() {
   const [website, setWebsite] = useState('');
   const [username, setUsername] = useState('');
@@ -157,6 +185,7 @@ export default function App() {
   const [passwordVisibility, setPasswordVisibility] = useState({});
   const [accountAddress, setAccountAddress] = useState('');
   const [contractAddress, setContractAddress] = useState('');
+  const [orders, setOrders] = useState([]);
 
   // Pop up Prompt window to enter master password
   const [isPromptVisible, setIsPromptVisible] = useState(false);
@@ -355,6 +384,28 @@ export default function App() {
     </TouchableOpacity>
   );
 
+  const OrderItem = ({ item }) => (
+    <View style={styles.item}>
+      <Text style={styles.titleText}>訂單編號: {item.訂單編號}</Text>
+      <Text>日期: {item.日期}</Text>
+      <Text>訂單狀態: {item.訂單狀態}</Text>
+      <Text>總價: {item.總價}</Text>
+      <Text>付款方式: {item.付款}</Text>
+      <Text>配送狀態: {item.配送狀態}</Text>
+      <Text>產品名稱: {item.產品名稱}</Text>
+      <Text>物流資訊: {item.物流資訊}</Text>
+    </View>
+  );
+
+  const fetchOrders = async () => {
+    try {
+      const response = await axios.get('http://10.0.2.2:5000/getOrders');
+      setOrders(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const handleAddressUpdate = (newAddress) => {
     setAccountAddress(newAddress);
   };
@@ -378,6 +429,13 @@ export default function App() {
         <Text style={[styles.text]}>masterPassword is {masterPassword}</Text>
       )}
       <Button title="Send Message" onPress={sendMessageToServer} />
+      <Button title="Fetch Orders" onPress={fetchOrders} />
+      <FlatList
+        data={orders}
+        renderItem={OrderItem}
+        keyExtractor={item => item.訂單編號}
+        style={styles.list}
+      />
       <WagmiConfig config={wagmiConfig}>
         <View style={styles.marginVertical}>
           <W3mButton balance='show'/>
