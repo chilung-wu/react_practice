@@ -152,6 +152,7 @@ const HomePage = ({ navigation }) => {
   const [website, setWebsite] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [inputMasterPassword, setInputMasterPassword] = useState('');
   const [credentials, setCredentials] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [accountAddress, setAccountAddress] = useState('');
@@ -159,9 +160,10 @@ const HomePage = ({ navigation }) => {
 
   // Pop up Prompt window to enter master password
   const [isPromptVisible, setIsPromptVisible] = useState(false);
+  const [isDecryptAllVisible, setIsDecryptAllVisible] = useState(false);
   const [tempMasterPassword, setTempMasterPassword] = useState('');
   const [decryptedPasswordToShow, setDecryptedPasswordToShow] = useState('');
-  
+  const [decryptedAllCredentials, setDecryptedAllCredentials] = useState([]);
   const [error, setError] = useState('');
 
   // initialize, load credentials and master password
@@ -185,13 +187,50 @@ const HomePage = ({ navigation }) => {
 
   const encryptData = () => {
     const salt = CryptoJS.lib.WordArray.random(128 / 8).toString();
-    const key = CryptoJS.PBKDF2(tempMasterPassword, salt, { 
+    const key = CryptoJS.PBKDF2(inputMasterPassword, salt, { 
       keySize: 256 / 32,
       iterations: 1000
     }).toString();
     // console.log('enc-key', key);
     const encryptedPassword = CryptoJS.AES.encrypt(password, key).toString();
     return { encryptedPassword, salt };
+  };
+
+  const decryptAll = async () => {
+    // 檢查主密碼是否已設置
+    if (!tempMasterPassword) {
+      setError("請先輸入主密碼。");
+      return;
+    }
+  
+    try {
+      // 創建一個新數組來存儲解密後的憑證
+      const decryptedCredentials = await Promise.all(credentials.map(async (cred) => {
+        // 對每個憑證進行解密
+        console.log('cred', cred);
+        const decryptedPassword = await decryptData(cred.encryptedPassword, cred.salt, tempMasterPassword);
+        console.log('decryptedPassword', decryptedPassword);
+        // 返回一個包含網站、用戶名和解密後密碼的新對象
+        const decryptedCredential = {
+          website: cred.website,
+          username: cred.username,
+          decryptedPassword: decryptedPassword, // 使用解密後的密碼
+          id: cred.id
+        };
+        console.log(decryptedCredential);
+        return decryptedCredential;
+      }));
+  
+      // 將解密後的憑證數組設置到狀態中
+      // setDecryptedAllCredentials(decryptedCredentials);
+      console.log('decryptedAllCredentials', decryptedAllCredentials);
+      setError('');
+      return decryptedCredentials;
+    } catch (error) {
+      // 處理解密過程中可能發生的任何錯誤
+      setError("解密過程中發生錯誤。請檢查主密碼。");
+      console.error("Decrypt All Error:", error);
+    }
   };
 
   // Decrypt the selected credential and show the password, if failed, show error message.
@@ -252,7 +291,8 @@ const HomePage = ({ navigation }) => {
     setWebsite('');
     setUsername('');
     setPassword('');
-    setTempMasterPassword('');
+    setInputMasterPassword('');
+    // setTempMasterPassword('');
   };
 
   const deleteCredential = async (id) => {
@@ -266,12 +306,12 @@ const HomePage = ({ navigation }) => {
   // clear all data from SecureStore
   const _clearData = async () => {
     await SecureStore.deleteItemAsync('credentials');
-    await SecureStore.deleteItemAsync('masterPassword');
     setCredentials([]);
     setWebsite('');
     setUsername('');
     setPassword('');
     setCredentials([]);
+    setInputMasterPassword('');
     setTempMasterPassword('');
     setDecryptedPasswordToShow('');
   };
@@ -314,11 +354,22 @@ const HomePage = ({ navigation }) => {
     setAccountAddress(newAddress);
   };
 
-  const ListHeader = () => (
+  const handleNavigateToOrders = () => {
+    setIsDecryptAllVisible(true);
+  };
+
+  const handleDecryptAndNavigate = async () => {
+    const decryptedCredentials = await decryptAll();
+    navigation.navigate('Orders', {DecryptedCredentials: decryptedCredentials});
+    setIsDecryptAllVisible(false);
+    setTempMasterPassword('');
+
+  };
+
+  const ListHeader = (
     <View>
       <Button title="Send Message" onPress={sendMessageToServer} />
-      {/* <Text>{"\n"}</Text> */}
-      <Button title="Fetch Orders" onPress={() => navigation.navigate('Orders')} />
+      <Button title="Fetch Orders" onPress={handleNavigateToOrders} />
       <WagmiConfig config={wagmiConfig}>
         <View style={styles.marginVertical}>
           <W3mButton balance='show'/>
@@ -328,7 +379,6 @@ const HomePage = ({ navigation }) => {
         </View>
       <Web3Modal />
       </WagmiConfig>
-      {/* <Text>{"\n"}</Text> */}
       <View style={styles.pickerContainer}>
         <Picker
           selectedValue={website}
@@ -344,9 +394,9 @@ const HomePage = ({ navigation }) => {
         </Picker>
       </View>
       {/* <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Website URL" value={website} onChangeText={setWebsite} /> */}
-      <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Username" value={username} onChangeText={setUsername} />
-      <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
-      <TextInput style={[styles.input, styles.itemTextStyle]} placeholder="Master Password" value={tempMasterPassword} onChangeText={setTempMasterPassword} secureTextEntry />
+      <TextInput key="usernameInput" style={[styles.input, styles.itemTextStyle]} placeholder="Username" value={username} onChangeText={setUsername} />
+      <TextInput key="passwordInput" style={[styles.input, styles.itemTextStyle]} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
+      <TextInput key="masterpasswordInput" style={[styles.input, styles.itemTextStyle]} placeholder="Master Password" value={inputMasterPassword} onChangeText={setInputMasterPassword} secureTextEntry />
       <Button title="Add Credential" onPress={addCredential} />
       <Text>{"\n"}</Text>
       <Button title="Clear Data" onPress={_clearData}/>
@@ -358,10 +408,39 @@ const HomePage = ({ navigation }) => {
       <FlatList // FlatList是一個高效的滾動列表元件，用於顯示一個滾動的數據列表
       data={credentials} // 設定這個列表顯示的數據源，credentials是一個包含多個項目的數組
       ListHeaderComponent={ListHeader} // 設定列表頭部元件，這裡使用了一個自定義的ListHeader組件
+      // ListHeader  ****直接將React元素傳遞給ListHeaderComponent屬性，而不是透過一個函數傳回***
+      // ref https://github.com/facebook/react-native/issues/13365
+      // https://github.com/callstack/react-native-paper/issues/736
       renderItem={renderItem} // 指定如何渲染每一項數據，這裡傳入了上面定義的renderItem函數
       keyExtractor={item => item.id} // 指定每一項數據的唯一鍵值，這裡使用每個項目的id作為唯一鍵
       extraData={selectedId} // 當selectedId變化時，會觸發列表重新渲染，確保選中狀態的更新能夠正確顯示
       />
+      <Modal
+      animationType="slide"
+      transparent={true}
+      visible={isDecryptAllVisible}
+      onRequestClose={() => {
+        setIsDecryptAllVisible(!isDecryptAllVisible);
+        setTempMasterPassword('');
+        setError('');
+      }}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}> 
+            <TextInput
+              secureTextEntry
+              style={styles.modalText}
+              placeholder="Enter Master Password"
+              onChangeText={text => setTempMasterPassword(text)}
+              value={tempMasterPassword}
+            />
+            <Button
+              title="Decrypt All"
+              onPress={handleDecryptAndNavigate} 
+            />
+          </View>
+        </View>
+      </Modal>
       <View style={styles.centeredView}>
       <Modal
         animationType="slide"

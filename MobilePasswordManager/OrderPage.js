@@ -3,7 +3,19 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 
-const OrderPage = () => {
+const OrderPage = ({route}) => {
+    const { DecryptedCredentials } = route.params;
+    console.log('DecryptedCredentials:', DecryptedCredentials);
+
+    // decryptedCredentials
+    const DecryptedCredentialsItem = ({ item }) => (
+        <View style={styles.item}>
+            <Text style={styles.itemText}>Website: {item.website}</Text>
+            <Text style={styles.itemText}>Username: {item.username}</Text>
+            <Text style={styles.itemText}>Decrypted Password: {item.decryptedPassword}</Text>
+        </View>
+    );
+
     const [orders, setOrders] = useState([]); //
     const [loading, setLoading] = useState(true); // 用於追蹤資料是否正在載入的狀態
 
@@ -21,11 +33,11 @@ const OrderPage = () => {
 
     // 使用 useEffect 鉤子，在元件掛載時取得訂單數據
     useEffect(() => {
-        fetchOrders();
+        // fetchOrders();
     }, []); // 空數組表示這個 effect 只在元件掛載時運行一次
 
     // 一個渲染每個訂單的函數
-    const renderItem = ({ item }) => (
+    const renderOrderItem = ({ item }) => (
         <View style={styles.item}>
             <Text style={styles.titleText}>訂單編號: {item.訂單編號}</Text>
             <Text style={styles.itemText}>日期: {item.日期}</Text>
@@ -40,15 +52,21 @@ const OrderPage = () => {
 
     return (
         <View style={styles.container}>
-        {loading ? (
+        {/* {loading ? (
             <ActivityIndicator size="large" /> // 如果資料正在加載，顯示加載指示器
         ) : (
             <FlatList
             data={orders} // 將狀態中的訂單資料傳遞給 FlatList
-            renderItem={renderItem} // 指定如何渲染每個訂單
+            renderItem={renderOrderItem} // 指定如何渲染每個訂單
             keyExtractor={item => item.訂單編號} // 指定每個訂單的唯一鍵值
             />
-        )}
+        )} */}
+        {/* ******decryptedCredentials********* */}
+        <FlatList
+            data={DecryptedCredentials} // Pass the credentials data from state to FlatList
+            renderItem={DecryptedCredentialsItem} // Specify how to render each item
+            keyExtractor={item => item.id} // Specify a unique key for each item
+        />
         </View>
     );
 };
