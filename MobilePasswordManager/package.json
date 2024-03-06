@@ -4,8 +4,8 @@
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
@@ -34,7 +34,8 @@
     "react-native-svg": "14.1.0",
     "rn-crypto-js": "^1.1.2",
     "viem": "1.21.4",
-    "wagmi": "1.4.13"
+    "wagmi": "1.4.13",
+    "expo-system-ui": "~2.9.3"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

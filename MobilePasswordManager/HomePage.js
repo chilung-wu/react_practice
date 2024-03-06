@@ -137,8 +137,9 @@ function UploadData({ account, credentials }){
 
 // Demo: send message to server
 const sendMessageToServer = async () => {
-  try {
-    const response = await axios.post('http://10.0.2.2:5000/hello', {
+  try { 
+    // const response = await axios.post('http://10.0.2.2:5000/hello', {
+    const response = await axios.post('https://10.0.2.2:443/hello', {
       message: "hello"
     });
     alert(response.data.message);
