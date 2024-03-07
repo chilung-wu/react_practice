@@ -36,7 +36,8 @@
     "react-native-svg": "14.1.0",
     "rn-crypto-js": "^1.1.2",
     "viem": "1.21.4",
-    "wagmi": "1.4.13"
+    "wagmi": "1.4.13",
+    "expo-dev-client": "~3.3.9"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

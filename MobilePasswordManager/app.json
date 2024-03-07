@@ -29,7 +29,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      "./plugins/trust-local-certs.js"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "da5a1bc0-719a-4df3-acf7-f1da51ed902a"
+      }
+    }
   }
 }
